@@ -5,7 +5,6 @@ module Eval =
     open Ast
     open Errors
     open System.IO
-    open System.Linq.Expressions
 
     let fileIOFunction func = function 
         | [String fileName] -> func (fileName)
@@ -32,6 +31,17 @@ module Eval =
         | List [n]  -> unpackNum n 
         | notNumber -> throw (TypeMismatch("number", notNumber)) 
 
+    let rec unpackStr = function
+        | String s -> s
+        | Number n -> n.ToString()
+        | Bool b -> b.ToString()
+        | List [s] -> unpackStr s
+        | noString -> throw (TypeMismatch("string", noString))
+
+    let rec unpackBool = function
+        | Bool b -> b
+        | List [b] -> unpackBool b
+        | noBool -> throw (TypeMismatch("boolean", noBool))
 
     let numericBinop op parms = 
         if List.length parms < 2 then
@@ -47,6 +57,35 @@ module Eval =
     let numBoolBinop = boolBinop unpackNum
     let strBoolBinop = boolBinop unpackStr
     let boolBoolBinop = boolBinop unpackBool
+
+    let car = function
+        | [List (x :: _)] -> x
+        | [DottedList (x :: _, _)] -> x
+        | [badArg] -> throw (TypeMismatch("pair", badArg))
+        | badArgList -> throw (NumArgs(1, badArgList))
+
+    let cdr = function
+        | [List (x::xs)] -> List xs
+        | [DottedList ([xs], x)] -> x
+        | [DottedList ((_ :: xs), x)] -> DottedList (xs, x)
+        | [badArg] -> throw (TypeMismatch("pair", badArg))
+        | badArgList -> throw (NumArgs(1, badArgList))
+
+    let cons = function
+        | [x; List xs] -> List (x :: xs)
+        | [x; DottedList (xs, xlast)] -> DottedList(x :: xs, xlast)
+        | [x1; x2] -> DottedList([x1], x2)
+        | badArgList -> throw (NumArgs(2, badArgList))
+    
+    let rec eqvPrim e1 e2 =
+        match e1, e2 with
+        | (Bool b1, Bool b2) -> b1 = b2
+        | (Number n1, Number n2) -> n1 = n2
+        | (String s1, String s2) -> s1 = s2
+        | (Atom a1, Atom a2) -> a1 = a2
+        | (DottedList (xs, x), DottedList(ys, y)) -> eqvPrim (List (xs @ [x])) (List (ys @ [y]))
+        | (List l1, List l2) -> l1.Length = l2.Length && List.forall2 eqvPrim l1 l2
+        | _ -> false
 
     let rec primitives = 
         [
