@@ -46,9 +46,12 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="Errors.fs" />
+    <Compile Include="Repl.fs" />
     <None Include="App.config" />
     <Content Include="packages.config" />
+    <Compile Include="Eval.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
