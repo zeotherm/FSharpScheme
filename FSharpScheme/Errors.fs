@@ -1,8 +1,8 @@
 ﻿namespace Lisp
 
 module Errors =
-    //open FParsec.Primitives 
-    //open FParsec.CharParsers 
+    open FParsec.Primitives 
+    open FParsec.CharParsers 
     //open FParsec.OperatorPrecedenceParser 
 
     open Ast
@@ -10,7 +10,7 @@ module Errors =
     type LispError =
         | NumArgs of int * LispVal list
         | TypeMismatch of string * LispVal
-        //| ParseError of string * FParsec.Error.ParserError
+        | ParseError of string * FParsec.Error.ParserError
         | BadSpecialForm of string * LispVal
         | NotFunction of string * string
         | UnboundVar of string * string
@@ -20,7 +20,7 @@ module Errors =
     let showError = function
         | NumArgs(expected, found) -> "Expected " + expected.ToString() + " args; found values " + unwordsList found 
         | TypeMismatch(expected, found) -> "Invalid type: expected " + expected + ", found " + showVal found 
-        //| ParseError(msg, _) -> "Parse Errror" + msg 
+        | ParseError(msg, _) -> "Parse Errror" + msg 
         | BadSpecialForm(message, form) -> message + showVal form 
         | NotFunction(message, func) -> message + func 
         | UnboundVar(message, varName) -> message + varName 

@@ -1,10 +1,27 @@
 ﻿namespace Lisp
 
 module Eval =
+    open FParsec.CharParsers 
 
     open Ast
     open Errors
+    open Parser
     open System.IO
+
+    let rec last = function 
+        | hd :: [] -> hd 
+        | hd :: tl -> last tl 
+        | _ -> failwith "Empty list."  
+
+
+    let readOrThrow parser input =
+        match run parser input with
+            | Success(v, _, _) -> v
+            | Failure (msg, err, _) -> raise (LispException(ParseError(msg, err)))
+    
+    let readExpr = readOrThrow parseExpr 
+    let readExprList = readOrThrow (endBy parseExpr spaces) 
+
 
     let fileIOFunction func = function 
         | [String fileName] -> func (fileName)
@@ -43,6 +60,13 @@ module Eval =
         | List [b] -> unpackBool b
         | noBool -> throw (TypeMismatch("boolean", noBool))
 
+    let tryUnpacker (unpack: LispVal -> 'a) (op: 'a -> 'a -> bool) arg1 arg2 =
+        try op (unpack arg1) (unpack arg2) with _ -> false
+    
+    let numUnpackEq = tryUnpacker unpackNum (=)
+    let strUnpackEq = tryUnpacker unpackStr (=)
+    let boolUnpackEq = tryUnpacker unpackBool (=)
+    
     let numericBinop op parms = 
         if List.length parms < 2 then
             throw <| NumArgs(2, parms)
@@ -86,6 +110,47 @@ module Eval =
         | (DottedList (xs, x), DottedList(ys, y)) -> eqvPrim (List (xs @ [x])) (List (ys @ [y]))
         | (List l1, List l2) -> l1.Length = l2.Length && List.forall2 eqvPrim l1 l2
         | _ -> false
+
+    let eqv = function
+        | [e1; e2] -> Bool (eqvPrim e1 e2)
+        | badArgList -> throw (NumArgs (2, badArgList))
+    
+    let equal = function
+        | [arg1; arg2] ->
+            let unpackEqual = numUnpackEq arg1 arg2 ||
+                              strUnpackEq arg1 arg2 ||
+                              boolUnpackEq arg1 arg1
+            Bool (eqvPrim arg1 arg2 || unpackEqual)
+        | argsList -> throw (NumArgs(2, argsList))
+
+
+    let makePort fileAccess = fileIOFunction (fun fileName -> File.Open(fileName, FileMode.OpenOrCreate, fileAccess) |> Port)
+
+    let closePort = function
+        | [Port(port)] -> port.Close() ; Bool true
+        | _ -> Bool false
+    
+    let rec readProc port = 
+        let parseReader (reader: TextReader) = reader.ReadLine() |> readExpr
+        match port with 
+            | [] -> parseReader(System.Console.In)
+            | [Port(port)] ->
+                use reader = new StreamReader(port)
+                parseReader (reader)
+            | args -> throw (NumArgs(1, args))
+    
+    let writeProc objPort =
+        let write obj (writer: TextWriter) = writer.Write(showVal obj) ; Bool true
+        match objPort with 
+            | [obj] -> write obj (System.Console.Out)
+            | [obj ; Port(port)] ->
+                use writer = new StreamWriter(port)
+                write obj writer
+            | args -> throw (NumArgs(1, args))
+    
+    let readContents = fileIOFunction (fun fileName -> File.ReadAllText(fileName) |> String)
+
+    let readAll fileName = load fileName |> List
 
     let rec primitives = 
         [
@@ -174,4 +239,9 @@ module Eval =
             match eval env pred with 
             | Bool(false) -> eval env alt
             | _ -> eval env conseq
-     
+    and
+        applyProc = function
+            | [func; List args] -> apply func args
+            | func :: args -> apply func args
+            | [] -> throw (Default("Expecting a function, got an empty list"))
+
