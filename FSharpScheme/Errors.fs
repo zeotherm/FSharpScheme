@@ -1,11 +1,8 @@
 ﻿namespace Lisp
 
 module Errors =
-    open FParsec.Primitives 
-    open FParsec.CharParsers 
-    //open FParsec.OperatorPrecedenceParser 
-
     open Ast
+    open Parser
 
     type LispError =
         | NumArgs of int * LispVal list

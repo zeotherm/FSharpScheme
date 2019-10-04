@@ -6,6 +6,7 @@ module Eval =
     open Ast
     open Errors
     open Parser
+    open SymbolTable
     open System.IO
 
     let rec last = function 
@@ -13,15 +14,13 @@ module Eval =
         | hd :: tl -> last tl 
         | _ -> failwith "Empty list."  
 
-
-    let readOrThrow parser input =
-        match run parser input with
-            | Success(v, _, _) -> v
-            | Failure (msg, err, _) -> raise (LispException(ParseError(msg, err)))
-    
+    let readOrThrow parser input = 
+        match run parser input with 
+        | Success (v, _, _) -> v 
+        | Failure (msg, err, _) -> raise (LispException(ParseError(msg, err))) 
+ 
     let readExpr = readOrThrow parseExpr 
     let readExprList = readOrThrow (endBy parseExpr spaces) 
-
 
     let fileIOFunction func = function 
         | [String fileName] -> func (fileName)

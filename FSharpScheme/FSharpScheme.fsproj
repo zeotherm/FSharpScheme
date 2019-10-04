@@ -47,8 +47,9 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Ast.fs" />
-    <Compile Include="Errors.fs" />
     <Compile Include="Parser.fs" />
+    <Compile Include="Errors.fs" />
+    <Compile Include="SymbolTable.fs" />
     <Compile Include="Eval.fs" />
     <Compile Include="Repl.fs" />
     <None Include="App.config" />
